@@ -1,0 +1,76 @@
+name: Docker Build and Push to GHCR
+
+# Триггеры для запуска воркфлоу:
+on:
+  push:
+    branches:
+      - main  # Запускать при пуше в ветку main
+      # - master # Если основная ветка называется master
+    tags:
+      - 'v*.*.*' # Запускать при пуше тегов вида v1.0.0
+  pull_request:
+    branches:
+      - main # Запускать при создании/обновлении PR в main (для проверки сборки)
+      # - master
+
+env:
+  # Имя репозитория Docker-образов в GHCR.
+  # Обычно это ghcr.io/ИМЯ_ПОЛЬЗОВАТЕЛЯ_ИЛИ_ОРГАНИЗАЦИИ/ИМЯ_ОБРАЗА
+  # GitHub Actions автоматически подставит GITHUB_REPOSITORY в формате владелец/репозиторий
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest # Запускать на последней версии Ubuntu
+    permissions:
+      contents: read      # Нужно для checkout кода
+      packages: write     # Нужно для пуша образов в GHCR
+      # id-token: write   # Если используешь OIDC для аутентификации с облачными провайдерами (не для GHCR)
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4 # Используем последнюю версию action для скачивания кода
+
+      - name: Set up QEMU (for multi-platform builds, optional but good practice)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        # С этим action вы можете собирать образы для разных архитектур (например, amd64, arm64)
+
+      - name: Log in to GitHub Container Registry
+        # Этот шаг нужен только если вы пушите образ (не при pull_request)
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }} # Имя пользователя, инициировавшего воркфлоу
+          password: ${{ secrets.GITHUB_TOKEN }} # Специальный токен, предоставляемый GitHub Actions
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta # Даем этому шагу id, чтобы ссылаться на его выводы
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            # Тип 'sha' - добавляет тег с коротким хешем коммита (например, ghcr.io/user/repo:sha-abcdef)
+            type=sha,prefix=,suffix=,format=short
+            # Тип 'ref' - для веток и тегов
+            type=ref,event=branch
+            type=ref,event=pr
+            type=ref,event=tag
+            # Тип 'raw' - добавляет тег 'latest', если это ветка по умолчанию (main/master)
+            type=raw,value=latest,enable={{is_default_branch}}
+            # Пример: если пуш в main -> теги: main, latest, sha-xxxxxxx
+            # Пример: если пуш тега v1.0.0 -> теги: v1.0.0, latest (если main), sha-xxxxxxx
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: . # Контекст сборки (где находится Dockerfile)
+          file: ./Dockerfile # Путь к Dockerfile
+          push: ${{ github.event_name != 'pull_request' }} # Пушить образ только если это не PR
+          tags: ${{ steps.meta.outputs.tags }} # Использовать теги, сгенерированные на шаге 'meta'
+          labels: ${{ steps.meta.outputs.labels }} # Использовать метки, сгенерированные на шаге 'meta'
+          cache-from: type=gha # Использовать кэш GitHub Actions для ускорения сборки
+          cache-to: type=gha,mode=max

@@ -1,0 +1,23 @@
+# IDE specific
+.idea
+.vscode
+
+# Python specific
+venv/
+.venv/ 
+__pycache__/ 
+*.pyc
+*.pyo
+*.pyd
+
+# Secrets and environment files
+.env
+
+# Log files
+*.log
+logs/
+
+# Другие
+# .private
+# uploads/
+*.pth
