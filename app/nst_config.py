@@ -15,7 +15,13 @@ class NSTConfig:
         self.DEFAULT_STYLE_IMAGE_DIR = Path(
             data.get("DEFAULT_STYLE_IMAGE_DIR", "static/style_images")
         )
-        self.MODEL_PATH = str(data.get("MODEL_PATH", "models/vgg19-dcbb9e9d.pth"))
+
+        # Model parameters
+        self.MODEL_PATH = str(data.get("MODEL_PATH", "models/"))
+        # It only makes sense to add a parameter to the yaml-file if you want
+        # to use the full vgg 19 model(not recommended).
+        # Values:{"shrunk_object" or "full_statedict"}
+        self.MODEL_TYPE = str(data.get("MODEL_TYPE", "shrunk_object")).lower()
 
         # Device parameters
         self.DEVICE_PREFERENCE = str(data.get("DEVICE", "auto")).lower()

@@ -1,7 +1,13 @@
 # Параметры для Neural Style Transfer (NST)
 
-# Пути к ресурсам
-MODEL_PATH: "models/vgg19-dcbb9e9d.pth"
+# Путь к модели VGG19(фичаэкстрактор)
+MODEL_PATH: "models/vgg19_11_layers.pth"  
+# MODEL_PATH: "models/vgg19-dcbb9e9d.pth" 
+# MODEL_TYPE: "shrunk_object"
+# MODEL_TYPE: "full_statedict"
+
+
+# Пути к изображениям
 TEMP_IMAGE_DIR: "temp_images"
 DEFAULT_STYLE_IMAGE_DIR: "static/style_images"
 

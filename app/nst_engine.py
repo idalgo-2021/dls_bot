@@ -1,10 +1,14 @@
+# nst_engine.py
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from PIL import Image
 import torchvision.transforms as transforms
+
 from torchvision.models import vgg19
+
 import logging
 import io
 from pathlib import Path
@@ -72,22 +76,70 @@ class NSTEngine:
         # logger.info(f"Determined device: {self.device}, Determined image size: {self.image_size}")
 
     def _load_model(self):
-        model_path_abs = Path(__file__).resolve().parent / nst_params.MODEL_PATH
-        cnn_model_instance = vgg19(weights=None)
-        if model_path_abs.exists():
-            try:
-                logger.info(f"Loading VGG19 weights from: {model_path_abs}")
-                cnn_model_instance.load_state_dict(
-                    torch.load(model_path_abs, map_location=self.device)
-                )
-            except Exception as e:
-                logger.error(f"Failed to load weights from {model_path_abs}: {e}")
-                raise RuntimeError(f"Could not load model weights from {model_path_abs}") from e
-        else:
-            logger.error(f"Model file {model_path_abs} not found!")
-            raise FileNotFoundError(f"Model file {model_path_abs} not found.")
+        model_config_path_str = str(nst_params.MODEL_PATH)
+        model_type = str(nst_params.MODEL_TYPE)
 
-        self.cnn_model = cnn_model_instance.features.to(self.device).eval()
+        model_path_abs = Path(__file__).resolve().parent / model_config_path_str
+
+        model_loaded_successfully = False
+        logger.info(
+            "Attempting to load model. Type: '%s', Path: '%s'",
+            model_type,
+            model_path_abs if model_config_path_str else "N/A",
+        )
+
+        if model_type == "shrunk_object":
+            if not model_config_path_str:
+                logger.error("MODEL_TYPE is 'shrunk_object' but MODEL_PATH is not set.")
+            elif model_path_abs.exists():
+                try:
+                    logger.info(f"Loading SHRUNK VGG19 model OBJECT from: {model_path_abs}")
+                    loaded_model_features = torch.load(
+                        model_path_abs,
+                        map_location=self.device,
+                        weights_only=False,
+                    )
+                    self.cnn_model = loaded_model_features.to(self.device).eval()
+                    logger.info(
+                        f"Successfully loaded shrunk VGG19 model object from {model_path_abs}"
+                    )
+                    model_loaded_successfully = True
+                except Exception as e:
+                    logger.error(
+                        f"Failed to load shrunk model object from {model_path_abs}: {e}",
+                        exc_info=True,
+                    )
+            else:
+                logger.error(f"MODEL_TYPE is 'shrunk_object' but file {model_path_abs} not found.")
+
+        elif model_type == "full_statedict":
+            if not model_config_path_str:
+                logger.error("MODEL_TYPE is 'full_statedict' but MODEL_PATH is not set.")
+            elif model_path_abs.exists():
+                try:
+                    logger.info(f"Loading FULL VGG19 weights from state_dict: {model_path_abs}")
+                    cnn_model_instance = vgg19(weights=None)
+                    state_dict = torch.load(model_path_abs, map_location=self.device)
+                    cnn_model_instance.load_state_dict(state_dict)
+                    self.cnn_model = cnn_model_instance.features.to(self.device).eval()
+                    logger.info(f"Successfully loaded full VGG19 weights from {model_path_abs}")
+                    model_loaded_successfully = True
+                except Exception as e:
+                    logger.error(
+                        f"Failed to load weights from {model_path_abs} into full VGG19: {e}",
+                        exc_info=True,
+                    )
+            else:
+                logger.error(f"MODEL_TYPE is 'full_statedict' but file {model_path_abs} not found.")
+
+        if not model_loaded_successfully:
+            raise RuntimeError(
+                "FATAL: Could not load any VGG19 model. "
+                f"Specified type: '{model_type}', path: '{model_config_path_str}'. "
+                "Check config and file."
+            )
+
+        # Нормализация
         self.cnn_normalization_mean = torch.tensor(self.config.NORMALIZATION_MEAN).to(self.device)
         self.cnn_normalization_std = torch.tensor(self.config.NORMALIZATION_STD).to(self.device)
 
@@ -159,6 +211,11 @@ class NSTEngine:
             raise NSTModelNotInitializedError(
                 "NSTEngine is not initialized. Cannot get style model and losses."
             )
+        if self.cnn_model is None:
+            raise NSTModelNotInitializedError(
+                "CNN model (VGG features) is not loaded in NSTEngine."
+            )
+
         normalization = NSTEngine.Normalization(
             self.cnn_normalization_mean.tolist(),
             self.cnn_normalization_std.tolist(),
@@ -201,6 +258,7 @@ class NSTEngine:
                 model.add_module(f"style_loss_{i}", style_loss)
                 style_losses.append(style_loss)
 
+        # Обрезаем модель до последнего слоя потерь
         for i_crop in range(len(model) - 1, -1, -1):
             if isinstance(model[i_crop], NSTEngine.ContentLoss) or isinstance(
                 model[i_crop], NSTEngine.StyleLoss
