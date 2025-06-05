@@ -28,7 +28,8 @@ help:
 # --- Docker команды ---
 build:
 	@echo "Сборка Docker-образа $(IMAGE_NAME):$(TAG)..."
-	docker build -t $(IMAGE_NAME):$(TAG) .
+#	docker build -t $(IMAGE_NAME):$(TAG) .
+	docker build --load -t $(IMAGE_NAME):$(TAG) .
 
 run:
 	@echo "Запуск контейнера $(CONTAINER_NAME) из образа $(IMAGE_NAME):$(TAG) с $(ENV_FILE)..."
@@ -39,7 +40,7 @@ run-webhook:
 	@echo "Запуск контейнера $(CONTAINER_NAME) из образа $(IMAGE_NAME):$(TAG) в режиме webhook с $(ENV_FILE)..."
 	@echo "Убедитесь, что BOT_RUN_MODE=webhook и WEBHOOK_URL настроены в $(ENV_FILE)"
 	@echo "Не забудьте пробросить порт (например, -p 8443:8443) и запустить ngrok или аналог!"
-	docker run --rm --name $(CONTAINER_NAME) -p 8443:8443 --env-file $(ENV_FILE) $(IMAGE_NAME):$(TAG)
+	docker run --rm --name $(CONTAINER_NAME) -p 3000:3000 --env-file $(ENV_FILE) $(IMAGE_NAME):$(TAG)
 	# Замените 8443:8443 на ваш актуальный проброс портов, если он отличается
 
 logs:

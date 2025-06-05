@@ -72,5 +72,5 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }} # Пушить образ только если это не PR
           tags: ${{ steps.meta.outputs.tags }} # Использовать теги, сгенерированные на шаге 'meta'
           labels: ${{ steps.meta.outputs.labels }} # Использовать метки, сгенерированные на шаге 'meta'
-          cache-from: type=gha # Использовать кэш GitHub Actions для ускорения сборки
-          cache-to: type=gha,mode=max
+          # cache-from: type=gha # Использовать кэш GitHub Actions для ускорения сборки
+          # cache-to: type=gha,mode=max
