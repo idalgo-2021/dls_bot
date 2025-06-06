@@ -1,0 +1,78 @@
+# .github/workflows/deploy-on-vps.yml
+
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    # 'runs-on' указывает, на каком типе runner'а должна выполняться эта задача.
+    # 'self-hosted' означает, что задача будет направлена на один из собственных (self-hosted) runner'ов, т.е. VPS 
+    runs-on: self-hosted 
+    
+    steps:
+      - name: Checkout code
+        # 'uses' указывает на использование готового action из GitHub Marketplace или локального.
+        # 'actions/checkout@v4' - стандартный action для скачивания (checkout) кода репозитория на runner (т.е. VPS).
+        uses: actions/checkout@v4
+
+      - name: Build Docker image on VPS
+        run: docker build --load -t dls_bot_vps:latest . 
+        # 'docker build': стандартная команда для сборки Docker-образа.
+        # '--load': флаг для Docker Buildx, который гарантирует, что собранный образ
+        #           будет загружен в локальный Docker image store на VPS.
+        # '-t dls_bot_vps:latest': присваивает образу имя 'dls_bot_vps' и тег 'latest'.
+        #                          Это имя будет локальным для Docker на твоем VPS.
+        # '.': указывает, что контекст сборки (где находится Dockerfile) - это текущий каталог 
+        #      (корень репозитория, скачанный на предыдущем шаге).
+
+      - name: Stop and remove old container (if exists)
+        run: | 
+          # 'docker stop dls_bot_instance': останавливает контейнер с именем 'dls_bot_instance'.
+          # '|| true': если контейнер не найден (или уже остановлен), команда завершится ошибкой.
+          #            '|| true' предотвращает это, позволяя workflow продолжаться.
+          docker stop dls_bot_instance || true
+          # 'docker rm dls_bot_instance': удаляет остановленный контейнер с именем 'dls_bot_instance'.
+          docker rm dls_bot_instance || true   
+      
+      - name: Run new Docker container
+        run: |
+          docker run -d \
+            --name dls_bot_instance \
+            --restart unless-stopped \
+            -p 2000:2000 \
+            --env-file /home/ubuntu/dls_bot_config/.env \
+            -v /etc/nginx/ssl/nginx-selfsigned.pem:/etc/nginx/ssl/nginx-selfsigned.pem \
+            dls_bot_vps:latest
+          # 'docker run': стандартная команда для запуска контейнера.
+          # '-d': запускает контейнер в фоновом (detached) режиме.
+          # '--name dls_bot_instance': присваивает контейнеру имя 'dls_bot_instance' (как ты использовал ранее).
+          # '--restart unless-stopped': политика перезапуска. Контейнер будет автоматически
+          #                             перезапускаться при сбоях или после перезагрузки VPS,
+          #                             если только он не был остановлен вручную ('docker stop').
+          # '-p 2000:2000': пробрасывает порт 2000 с хост-машины (VPS) на порт 2000 внутри контейнера.
+          #                 Нужно, если твой бот (например, в режиме webhook) слушает этот порт.
+          # '--env-file /home/ubuntu/dls_bot_config/.env': загружает переменные окружения
+          #                                               из указанного файла на VPS.
+          #                                               !!! УБЕДИСЬ, ЧТО ПУТЬ ПРАВИЛЬНЫЙ И ФАЙЛ СУЩЕСТВУЕТ НА VPS !!!
+          # '-v /etc/nginx/ssl/nginx-selfsigned.pem:/etc/nginx/ssl/nginx-selfsigned.pem': монтирует
+          #                                               файл SSL-сертификата с хоста VPS внутрь контейнера.
+          #                                               Нужно, если бот использует HTTPS с этим сертификатом.
+          #                                               !!! УБЕДИСЬ, ЧТО ЭТОТ ФАЙЛ СУЩЕСТВУЕТ НА VPS ПО УКАЗАННОМУ ПУТИ !!!
+          # 'dls_bot_vps:latest': имя и тег образа, из которого нужно запустить контейнер
+          #                       (тот, что был собран на Шаге 2).
+      
+      # Очистка старых Docker-образов
+      # 'if: success()' - этот шаг будет выполнен только если все предыдущие шаги в задаче 
+      #                 завершились успешно.
+      - name: Clean up old Docker images (optional)
+        if: success()
+        run: docker image prune -a -f --filter "until=24h"
+        # 'docker image prune': команда для удаления неиспользуемых Docker-образов.
+        # '-a': (all) удалить все неиспользуемые образы (не только "висячие").
+        # '-f': (force) не запрашивать подтверждения.
+        # '--filter "until=24h"': удалить только те неиспользуемые образы, которые были созданы
+        #                         более 24 часов назад. Помогает сохранить недавние кэши и версии.
