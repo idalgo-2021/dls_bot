@@ -10,7 +10,7 @@ from aiogram.webhook.aiohttp_server import (
     SimpleRequestHandler,
     setup_application,
 )
-
+from aiogram.types import FSInputFile
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.client.default import DefaultBotProperties
 from aiohttp import web
@@ -67,43 +67,28 @@ async def on_startup(bot: Bot, dispatcher: Dispatcher):
         webhook_url = str(settings.WEBHOOK_URL).rstrip("/") + settings.WEBHOOK_PATH
         logger.info(f"Setting webhook to: {webhook_url}")
         secret = settings.WEBHOOK_SECRET.get_secret_value() if settings.WEBHOOK_SECRET else None
-        # params_to_set_webhook = {
-        #     "url": webhook_url,
-        #     "drop_pending_updates": True,
-        #     "secret_token": secret,
-        # }
-        # if settings.WEBHOOK_CERT_PATH:
-        #     from aiogram.types import FSInputFile
-        #
-        #     try:
-        #         cert_file = FSInputFile(settings.WEBHOOK_CERT_PATH)
-        #         params_to_set_webhook["certificate"] = cert_file
-        #         logger.info((f"Using self-signed certificate: " f"{settings.WEBHOOK_CERT_PATH}"))
-        #     except Exception as e:
-        #         logger.error(
-        #             f"Error preparing certificate file " f"{settings.WEBHOOK_CERT_PATH}: {e}"
-        #         )
-        #         return
-        # try:
-        #     await bot.set_webhook(**params_to_set_webhook)
-        #     webhook_info = await bot.get_webhook_info()
-        #     logger.info(f"Webhook info: {webhook_info}")
-        #     if webhook_info.url != webhook_url:
-        #         logger.error(
-        #             f"Webhook was set to {webhook_info.url}, " f"but expected {webhook_url}"
-        #         )
-        # except Exception as e:
-        #     logger.error(f"Failed to set webhook: {e}", exc_info=True)
+
+        params_to_set_webhook = {
+            "url": webhook_url,
+            "drop_pending_updates": True,
+            "secret_token": secret,
+        }
+
+        if settings.WEBHOOK_CERT_PATH:
+            logger.info(f"Attempting to use self-signed certificate: {settings.WEBHOOK_CERT_PATH}")
+            try:
+                cert_file = FSInputFile(settings.WEBHOOK_CERT_PATH)
+                params_to_set_webhook["certificate"] = cert_file
+            except Exception as e:
+                logger.error(f"Error preparing certificate file {settings.WEBHOOK_CERT_PATH}: {e}")
+                return
         try:
-            await bot.set_webhook(
-                url=webhook_url,
-                drop_pending_updates=True,
-                secret_token=secret,
-                # ...
-            )
+            await bot.set_webhook(**params_to_set_webhook)
+            webhook_info = await bot.get_webhook_info()
+            logger.info(f"Webhook has been set successfully. Current info: {webhook_info}")
         except Exception as e:
             logger.error(f"Failed to set webhook: {e}", exc_info=True)
-    ###
+
     else:
         logger.info("Running in polling mode. Deleting any existing webhook.")
         try:

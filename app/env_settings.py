@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 # from pathlib import Path
 from pydantic import (
@@ -32,7 +33,7 @@ class Settings(BaseSettings):
     WEBHOOK_PORT: Optional[int] = 8443
     WEBHOOK_SECRET: Optional[SecretStr] = None
     WEBHOOK_PATH: Optional[str] = None
-    # WEBHOOK_CERT_PATH: Optional[str] = None
+    WEBHOOK_CERT_PATH: Optional[str] = None
 
     @field_validator("BOT_RUN_MODE")
     @classmethod
@@ -63,13 +64,12 @@ class Settings(BaseSettings):
                 raise ValueError("WEBHOOK_PATH must start with a '/' if provided.")
         return self
 
-    # @model_validator(mode="after")
-    # def validate_webhook_cert_path(self) -> "Settings":
-    #     if self.BOT_RUN_MODE == "webhook" and self.WEBHOOK_CERT_PATH:
-    #         path = Path(self.WEBHOOK_CERT_PATH)
-    #         if not path.is_file():
-    #             raise ValueError(
-    #                 f"WEBHOOK_CERT_PATH '{self.WEBHOOK_CERT_PATH}'
-    # does not point to a valid file."
-    #             )
-    #     return self
+    @model_validator(mode="after")
+    def validate_webhook_cert_path(self) -> "Settings":
+        if self.BOT_RUN_MODE == "webhook" and self.WEBHOOK_CERT_PATH:
+            path = Path(self.WEBHOOK_CERT_PATH)
+            if not path.is_file():
+                raise ValueError(
+                    f"WEBHOOK_CERT_PATH '{self.WEBHOOK_CERT_PATH}' does not point to a valid file."
+                )
+        return self
