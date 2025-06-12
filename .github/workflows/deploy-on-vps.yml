@@ -1,5 +1,3 @@
-# .github/workflows/deploy-on-vps.yml
-
 name: Deploy to VPS
 
 
@@ -47,12 +45,9 @@ jobs:
             -v /etc/nginx/ssl/nginx-selfsigned.pem:/certs/nginx-selfsigned.pem:ro \
             dls_bot_vps:latest
 
-      # Очистка старых Docker-образов
-      # 'if: success()' - этот шаг будет выполнен только если все предыдущие шаги в задаче 
-      #                 завершились успешно.
       - name: Clean up old Docker images (optional)
         if: success()
-        run: docker image prune -a -f --filter "until=24h"
+        run: docker image prune -a -f --filter "until=6h"
         # 'docker image prune': команда для удаления неиспользуемых Docker-образов.
         # '-a': (all) удалить все неиспользуемые образы (не только "висячие").
         # '-f': (force) не запрашивать подтверждения.

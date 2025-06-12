@@ -24,5 +24,5 @@ styles:
     display_name: "🌟 Стиль Ван Гога"
     model_file: "style_vangogh.pth"
   horse2zebra:
-    display_name: "Лошадь в зебру"
+    display_name: "🐴➡️🦓 Лошадь в зебру"
     model_file: "horse2zebra.pth"  
