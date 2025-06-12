@@ -28,8 +28,8 @@ help:
 # --- Docker команды ---
 build:
 	@echo "Сборка Docker-образа $(IMAGE_NAME):$(TAG)..."
-#	docker build -t $(IMAGE_NAME):$(TAG) .
-	docker build --load -t $(IMAGE_NAME):$(TAG) .
+	docker build -t $(IMAGE_NAME):$(TAG) .
+#	docker build --load -t $(IMAGE_NAME):$(TAG) .
 
 run:
 	@echo "Запуск контейнера $(CONTAINER_NAME) из образа $(IMAGE_NAME):$(TAG) с $(ENV_FILE)..."
