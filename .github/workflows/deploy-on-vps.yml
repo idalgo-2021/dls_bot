@@ -33,11 +33,7 @@ jobs:
 
       - name: Stop and remove old container (if exists)
         run: | 
-          # 'docker stop dls_bot_instance': останавливает контейнер с именем 'dls_bot_instance'.
-          # '|| true': если контейнер не найден (или уже остановлен), команда завершится ошибкой.
-          #            '|| true' предотвращает это, позволяя workflow продолжаться.
           docker stop dls_bot_instance || true
-          # 'docker rm dls_bot_instance': удаляет остановленный контейнер с именем 'dls_bot_instance'.
           docker rm dls_bot_instance || true   
       
       - name: Run new Docker container
@@ -47,8 +43,6 @@ jobs:
             --restart unless-stopped \
             -p 2000:2000 \
             --env-file /home/ubuntu/dls_bot_config/.env \
-            # Монтируем папку с моделями
-            # Путь слева - на VPS. Путь справа - внутри контейнера.
             -v /home/ubuntu/dls_bot_data/models:/usr/src/app/app/models \
             -v /etc/nginx/ssl/nginx-selfsigned.pem:/certs/nginx-selfsigned.pem:ro \
             dls_bot_vps:latest
