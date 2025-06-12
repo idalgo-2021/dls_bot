@@ -49,8 +49,8 @@ jobs:
             # Монтируем папку с моделями
             # Путь слева - на VPS. Путь справа - внутри контейнера.
             -v /home/ubuntu/dls_bot_data/models:/usr/src/app/app/models \
-            dls_bot_vps:latest
-            
+            dls_bot_instance:latest
+
       # Очистка старых Docker-образов
       # 'if: success()' - этот шаг будет выполнен только если все предыдущие шаги в задаче 
       #                 завершились успешно.
