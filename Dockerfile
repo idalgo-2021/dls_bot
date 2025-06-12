@@ -15,7 +15,7 @@ COPY ./app ./app/
 
 # Копируем прочие необходимые файлы
 COPY ./static ./static 
-COPY ./utils ./utils 
+# COPY ./utils ./utils 
 
 # Указываем команду для запуска приложения
 # Запускаем python с указанием модуля. Python сам найдет app.bot.
