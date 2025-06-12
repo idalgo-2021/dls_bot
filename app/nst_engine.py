@@ -1,5 +1,3 @@
-# nst_engine.py
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -12,7 +10,8 @@ from torchvision.models import vgg19
 import logging
 import io
 from pathlib import Path
-from app.nst_config import nst_params
+from app.nst_config import NSTConfig
+
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +21,7 @@ class NSTModelNotInitializedError(Exception):
 
 
 class NSTEngine:
-    def __init__(self, config):
+    def __init__(self, config: NSTConfig):
         self.config = config
         self.device = None
         self.image_size = None
@@ -39,45 +38,45 @@ class NSTEngine:
                 f"NSTEngine initialized. Device: {self.device}, Image Size: {self.image_size}"
             )
         except Exception as e:
+            self._initialized = False
             logger.critical(f"NSTEngine initialization failed: {e}", exc_info=True)
 
     def _determine_device_and_image_size(self):
-        pref = nst_params.DEVICE_PREFERENCE
+        pref = self.config.DEVICE_PREFERENCE
         determined_device_str = "cpu"
 
         if pref == "auto":
             if torch.cuda.is_available():
                 determined_device_str = "cuda"
-                image_size = nst_params.IMAGE_SIZE_CUDA
+                image_size = self.config.IMAGE_SIZE_CUDA
             else:
                 determined_device_str = "cpu"
-                image_size = nst_params.IMAGE_SIZE_CPU
+                image_size = self.config.IMAGE_SIZE_CPU
         elif pref == "cuda":
             if torch.cuda.is_available():
                 determined_device_str = "cuda"
-                image_size = nst_params.IMAGE_SIZE_CUDA
+                image_size = self.config.IMAGE_SIZE_CUDA
             else:
                 logger.warning("CUDA preferred in config but not available. Falling back to CPU.")
                 determined_device_str = "cpu"
-                image_size = nst_params.IMAGE_SIZE_CPU
+                image_size = self.config.IMAGE_SIZE_CPU
         elif pref == "cpu":
             determined_device_str = "cpu"
-            image_size = nst_params.IMAGE_SIZE_CPU
+            image_size = self.config.IMAGE_SIZE_CPU
         else:
             logger.warning(f"Unknown device preference '{pref}' in config. Falling back to CPU.")
             determined_device_str = "cpu"
-            image_size = nst_params.IMAGE_SIZE
+            image_size = self.config.IMAGE_SIZE
 
         if image_size is None:
-            image_size = nst_params.IMAGE_SIZE
+            image_size = self.config.IMAGE_SIZE
 
         self.device = torch.device(determined_device_str)
         self.image_size = int(image_size)
-        # logger.info(f"Determined device: {self.device}, Determined image size: {self.image_size}")
 
     def _load_model(self):
-        model_config_path_str = str(nst_params.MODEL_PATH)
-        model_type = str(nst_params.MODEL_TYPE)
+        model_config_path_str = str(self.config.MODEL_PATH)
+        model_type = str(self.config.MODEL_TYPE)
 
         model_path_abs = Path(__file__).resolve().parent / model_config_path_str
 
@@ -139,7 +138,7 @@ class NSTEngine:
                 "Check config and file."
             )
 
-        # Нормализация
+        # Normalization
         self.cnn_normalization_mean = torch.tensor(self.config.NORMALIZATION_MEAN).to(self.device)
         self.cnn_normalization_std = torch.tensor(self.config.NORMALIZATION_STD).to(self.device)
 

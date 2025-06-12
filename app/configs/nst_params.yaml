@@ -1,11 +1,11 @@
+#############################################
 # Параметры для Neural Style Transfer (NST)
+#############################################
 
 # Путь к модели VGG19(фичаэкстрактор)
-MODEL_PATH: "models/vgg19_11_layers.pth"  
-# MODEL_PATH: "models/vgg19-dcbb9e9d.pth" 
-# MODEL_TYPE: "shrunk_object"
-# MODEL_TYPE: "full_statedict"
-
+MODEL_PATH: "models/nst/vgg19_11_layers.pth"  
+# MODEL_PATH: "models/nst/vgg19-dcbb9e9d.pth" 
+# MODEL_TYPE: "full_statedict" # Раскомментировать только при использовании полной VGG19
 
 # Пути к изображениям
 TEMP_IMAGE_DIR: "temp_images"
@@ -30,7 +30,7 @@ IMAGE_SIZE_CUDA: 512
 NORMALIZATION_MEAN: [0.485, 0.456, 0.406]
 NORMALIZATION_STD: [0.229, 0.224, 0.225]
 
-# Слои для извлечения признаков
+# Слои для извлечения признаков. Перед изменением рекомендуется ознакомиться со структурой VGG19.
 CONTENT_LAYERS:
   - "conv_4"
 STYLE_LAYERS:

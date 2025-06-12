@@ -20,8 +20,8 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build Docker image on VPS
-        run: docker build -t dls_bot_vps:latest .
-        # run: docker build --load -t dls_bot_vps:latest . 
+        # run: docker build -t dls_bot_vps:latest .
+        run: docker build --load -t dls_bot_vps:latest . 
         # 'docker build': стандартная команда для сборки Docker-образа.
         # '--load': флаг для Docker Buildx, который гарантирует, что собранный образ
         #           будет загружен в локальный Docker image store на VPS.
@@ -46,26 +46,10 @@ jobs:
             --restart unless-stopped \
             -p 2000:2000 \
             --env-file /home/ubuntu/dls_bot_config/.env \
-            -v /etc/nginx/ssl/nginx-selfsigned.pem:/etc/nginx/ssl/nginx-selfsigned.pem \
+            # Монтируем папку с моделями
+            # Путь слева - на VPS. Путь справа - внутри контейнера.
+            -v /home/ubuntu/dls_bot_data/models:/usr/src/app/app/models \
             dls_bot_vps:latest
-          # 'docker run': стандартная команда для запуска контейнера.
-          # '-d': запускает контейнер в фоновом (detached) режиме.
-          # '--name dls_bot_instance': присваивает контейнеру имя 'dls_bot_instance' (как ты использовал ранее).
-          # '--restart unless-stopped': политика перезапуска. Контейнер будет автоматически
-          #                             перезапускаться при сбоях или после перезагрузки VPS,
-          #                             если только он не был остановлен вручную ('docker stop').
-          # '-p 2000:2000': пробрасывает порт 2000 с хост-машины (VPS) на порт 2000 внутри контейнера.
-          #                 Нужно, если твой бот (например, в режиме webhook) слушает этот порт.
-          # '--env-file /home/ubuntu/dls_bot_config/.env': загружает переменные окружения
-          #                                               из указанного файла на VPS.
-          #                                               !!! УБЕДИСЬ, ЧТО ПУТЬ ПРАВИЛЬНЫЙ И ФАЙЛ СУЩЕСТВУЕТ НА VPS !!!
-          # '-v /etc/nginx/ssl/nginx-selfsigned.pem:/etc/nginx/ssl/nginx-selfsigned.pem': монтирует
-          #                                               файл SSL-сертификата с хоста VPS внутрь контейнера.
-          #                                               Нужно, если бот использует HTTPS с этим сертификатом.
-          #                                               !!! УБЕДИСЬ, ЧТО ЭТОТ ФАЙЛ СУЩЕСТВУЕТ НА VPS ПО УКАЗАННОМУ ПУТИ !!!
-          # 'dls_bot_vps:latest': имя и тег образа, из которого нужно запустить контейнер
-          #                       (тот, что был собран на Шаге 2).
-      
       # Очистка старых Docker-образов
       # 'if: success()' - этот шаг будет выполнен только если все предыдущие шаги в задаче 
       #                 завершились успешно.

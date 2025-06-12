@@ -1,15 +1,18 @@
 import logging
-from pathlib import Path
+
+# from pathlib import Path
 from pydantic import (
     SecretStr,
     AnyHttpUrl,
     field_validator,
-    ValidationInfo,
+    # ValidationInfo,
     model_validator,
 )
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional, Any
+from typing import Optional
+
+# , Any
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +32,7 @@ class Settings(BaseSettings):
     WEBHOOK_PORT: Optional[int] = 8443
     WEBHOOK_SECRET: Optional[SecretStr] = None
     WEBHOOK_PATH: Optional[str] = None
-    WEBHOOK_CERT_PATH: Optional[str] = None
+    # WEBHOOK_CERT_PATH: Optional[str] = None
 
     @field_validator("BOT_RUN_MODE")
     @classmethod
@@ -39,14 +42,16 @@ class Settings(BaseSettings):
             raise ValueError("BOT_RUN_MODE must be 'polling' or 'webhook'")
         return mode
 
-    @field_validator("WEBHOOK_URL", "WEBHOOK_PORT", "WEBHOOK_SECRET")
-    @classmethod
-    def check_required_webhook_settings(
-        cls, v: Optional[Any], info: ValidationInfo
-    ) -> Optional[Any]:
-        if info.data.get("BOT_RUN_MODE") == "webhook" and v is None:
-            raise ValueError((f"{info.field_name} is required when " "BOT_RUN_MODE is 'webhook'"))
-        return v
+    @model_validator(mode="after")
+    def check_webhook_settings_are_present(self) -> "Settings":
+        if self.BOT_RUN_MODE == "webhook":
+            if not self.WEBHOOK_URL:
+                raise ValueError("WEBHOOK_URL is required for webhook mode")
+            if not self.WEBHOOK_PORT:
+                raise ValueError("WEBHOOK_PORT is required for webhook mode")
+            if not self.WEBHOOK_SECRET:
+                raise ValueError("WEBHOOK_SECRET is required for webhook mode")
+        return self
 
     @model_validator(mode="after")
     def process_webhook_path(self) -> "Settings":
@@ -58,22 +63,13 @@ class Settings(BaseSettings):
                 raise ValueError("WEBHOOK_PATH must start with a '/' if provided.")
         return self
 
-    @model_validator(mode="after")
-    def validate_webhook_cert_path(self) -> "Settings":
-        if self.BOT_RUN_MODE == "webhook" and self.WEBHOOK_CERT_PATH:
-            path = Path(self.WEBHOOK_CERT_PATH)
-            if not path.is_file():
-                raise ValueError(
-                    f"WEBHOOK_CERT_PATH '{self.WEBHOOK_CERT_PATH}' does not point to a valid file."
-                )
-        return self
-
-
-try:
-    settings = Settings()
-except ValueError as e:
-    logger.error(f"Configuration error: {e}")
-    if hasattr(e, "errors") and callable(e.errors):
-        for error_detail in e.errors():
-            logger.error(f"Detail: {error_detail}")
-    raise SystemExit(f"Configuration error. Check logs. Summary: {e}")
+    # @model_validator(mode="after")
+    # def validate_webhook_cert_path(self) -> "Settings":
+    #     if self.BOT_RUN_MODE == "webhook" and self.WEBHOOK_CERT_PATH:
+    #         path = Path(self.WEBHOOK_CERT_PATH)
+    #         if not path.is_file():
+    #             raise ValueError(
+    #                 f"WEBHOOK_CERT_PATH '{self.WEBHOOK_CERT_PATH}'
+    # does not point to a valid file."
+    #             )
+    #     return self

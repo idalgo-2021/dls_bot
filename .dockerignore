@@ -13,4 +13,5 @@ venv/
 logs/
 .env 
 certs/ 
+*.pth
 

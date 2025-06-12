@@ -1,5 +1,7 @@
 import asyncio
+import functools
 import logging
+import time
 from aiogram import Router, F, Bot
 from aiogram.filters import Command, StateFilter
 from aiogram.types import Message, CallbackQuery, BufferedInputFile
@@ -13,8 +15,6 @@ import os
 import uuid
 from pathlib import Path
 
-# from app.nst_engine import perform_style_transfer
-
 from .common import cmd_start as common_cmd_start
 
 from app.nst_engine import NSTEngine, NSTModelNotInitializedError
@@ -23,11 +23,11 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-# Определяем состояния FSM
+# FSM for NST
 class NSTStates(StatesGroup):
-    choosing_style_source = State()  # загрузить стиль или выбрать дефолтный
-    waiting_for_style_upload = State()  # Ожидание загрузки картинки стиля
-    waiting_for_content_image = State()  # Ожидание картинки контента
+    choosing_style_source = State()  # load the style or select the default one
+    waiting_for_style_upload = State()  # Waiting for the style image
+    waiting_for_content_image = State()  # Waiting for the content image
 
 
 def get_default_styles_buttons():
@@ -56,35 +56,19 @@ def get_default_styles_buttons():
 async def cmd_nst_start(message: Message, state: FSMContext):
     await state.clear()
 
-    # Создаем основной билдер
     final_builder = InlineKeyboardBuilder()
 
-    # 1. Добавляем кнопку "Загрузить свой стиль"
     final_builder.button(text="🎨 Загрузить свой стиль", callback_data="nst_upload_style")
-    # Эта кнопка будет в первом ряду, одна.
-    # Если нужны еще кнопки в этом ряду, добавляем их до adjust/row.
-
-    # 2. Получаем кнопки для дефолтных стилей
     default_style_buttons = get_default_styles_buttons()
 
     if default_style_buttons:
-        # Добавляем дефолтные стили.
-        # .add() добавляет их в текущий ряд, если он не завершен, или в новый.
-        # .adjust() потом распределит их.
         for btn in default_style_buttons:
-            final_builder.add(btn)  # Добавляем каждую кнопку
+            final_builder.add(btn)
 
-        # Распределяем кнопки:
-        # Первая кнопка ("Загрузить свой") будет в своем ряду.
-        # Остальные (дефолтные стили) по 2 в ряду.
-        # Количество кнопок для дефолтных стилей = len(default_style_buttons)
-        # Общее количество кнопок = 1 + len(default_style_buttons)
-        # Мы хотим: 1 кнопка в первом ряду, затем по 2 кнопки в последующих рядах для остальных
-        adjust_params = [1]  # Первая кнопка в своем ряду
+        adjust_params = [1]
         if default_style_buttons:
             adjust_params.extend([2] * (len(default_style_buttons) // 2))
             if len(default_style_buttons) % 2 == 1:
-                # Если нечетное кол-во дефолтных, последняя будет одна
                 adjust_params.append(1)
         final_builder.adjust(*adjust_params)
 
@@ -92,10 +76,8 @@ async def cmd_nst_start(message: Message, state: FSMContext):
             "🎨 Neural Style Transfer 🎨\n" "Выберите источник для изображения стиля:",
             reply_markup=final_builder.as_markup(),
         )
-    else:  # Если нет дефолтных стилей, только опция загрузки
-        # final_builder уже содержит кнопку "Загрузить свой стиль"
-        # и .adjust() по умолчанию разместит ее одну в ряду.
-        final_builder.adjust(1)  # Явно указываем, что одна кнопка в ряду
+    else:
+        final_builder.adjust(1)
         await message.answer(
             "🎨 Neural Style Transfer 🎨\n" "Пожалуйста, загрузите изображение для СТИЛЯ.",
             reply_markup=final_builder.as_markup(),
@@ -133,7 +115,7 @@ async def cb_default_style(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-# Отмена на любом этапе NST
+# Cancellation at any stage NST
 @router.message(Command("cancel"), StateFilter(NSTStates))
 async def cmd_cancel_nst(message: Message, state: FSMContext):
     current_state = await state.get_state()
@@ -143,7 +125,7 @@ async def cmd_cancel_nst(message: Message, state: FSMContext):
 
     logger.info(f"Cancelling state {current_state} for user {message.from_user.id}")
 
-    # Удаление временных файлов, если они были созданы
+    # Deleting temporary files if they have been created
     user_data = await state.get_data()
     style_img_path = user_data.get("style_image_path")
     content_img_path = user_data.get("content_image_path")
@@ -168,7 +150,6 @@ async def cmd_cancel_nst(message: Message, state: FSMContext):
 
     await state.clear()
     await message.answer("Процесс Neural Style Transfer отменен.")
-    # Можно вернуть пользователя к главному меню или приветствию
     await common_cmd_start(message, state)
 
 
@@ -180,7 +161,7 @@ async def nst_style_image_uploaded(message: Message, state: FSMContext, bot: Bot
 
     photo_file_id = message.photo[-1].file_id
 
-    # Сохраняем картинку во временный файл
+    # Saving the image to a temporary file
     file_info = await bot.get_file(photo_file_id)
     file_ext = Path(file_info.file_path).suffix or ".jpg"
     temp_style_filename = f"style_{message.from_user.id}_{uuid.uuid4().hex}{file_ext}"
@@ -201,7 +182,7 @@ async def nst_style_image_uploaded(message: Message, state: FSMContext, bot: Bot
     await message.answer("Стиль принят! Теперь отправь картинку с КОНТЕНТОМ (обычную).")
 
 
-@router.message(NSTStates.waiting_for_style_upload)  # Если не фото и не /cancel
+@router.message(NSTStates.waiting_for_style_upload)  # If not a photo and not /cancel
 async def nst_style_image_invalid_upload(message: Message):
     await message.answer(
         "Это не похоже на картинку. Пожалуйста, отправь картинку для СТИЛЯ "
@@ -209,8 +190,6 @@ async def nst_style_image_invalid_upload(message: Message):
     )
 
 
-# @router.message(NSTStates.waiting_for_content_image, F.photo)
-# async def nst_content_image_received(message: Message, state: FSMContext, bot: Bot):
 @router.message(NSTStates.waiting_for_content_image, F.photo)
 async def nst_content_image_received(
     message: Message, state: FSMContext, bot: Bot, nst_engine: NSTEngine
@@ -222,7 +201,7 @@ async def nst_content_image_received(
 
     content_photo_file_id = message.photo[-1].file_id
 
-    # Сохраняем контент-картинку во временный файл
+    # Saving the content image to a temporary file
     file_info = await bot.get_file(content_photo_file_id)
     file_ext = Path(file_info.file_path).suffix or ".jpg"
     temp_content_filename = f"content_{message.from_user.id}_{uuid.uuid4().hex}{file_ext}"
@@ -254,33 +233,45 @@ async def nst_content_image_received(
         "Контент принят! ✨ Начинаю магию стилизации... Это может занять некоторое время. ⏳"
     )
 
-    # Получаем nst_engine из dispatcher data
-    # nst_engine: NSTEngine = Dispatcher.get_current().get("nst_engine")
-    # Если не через аргумент функции
-    # if not nst_engine or not nst_engine._initialized:
-    #     logger.error("NST engine not available or not initialized.")
     if not nst_engine:
         logger.error("NST engine not available in dispatcher.")
         await message.answer("Сервис стилизации временно недоступен. Пожалуйста, попробуйте позже.")
         await state.clear()
         return
 
-    loop = asyncio.get_event_loop()
+    # loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
+
+    start_time = time.monotonic()
+
     try:
-        # Запускаем NST(perform_style_transfer) в асинхронном режиме
-        # perform_style_transfer сама по себе уже не async, а обычная функция#
-        stylized_image_bytes = await loop.run_in_executor(
-            None,  # Использует ThreadPoolExecutor по умолчанию
-            # perform_style_transfer,  # Функция для запуска
-            nst_engine.process_images,
-            style_image_path,  # Первый позиционный аргумент для perform_style_transfer
-            str(temp_content_path),  # Второй позиционный аргумент
-            # Если у perform_style_transfer есть еще параметры, передаем их дальше
-            # , num_steps=50 # например
+        # stylized_image_bytes = await loop.run_in_executor(
+        #     None,
+        #     nst_engine.process_images,
+        #     style_image_path,
+        #     str(temp_content_path),
+        # )
+
+        func_to_run = functools.partial(
+            nst_engine.process_images, style_image_path, str(temp_content_path)
         )
+        stylized_image_bytes = await loop.run_in_executor(None, func_to_run)
+
+        end_time = time.monotonic()
+        duration_seconds_total = int(end_time - start_time)
+        minutes = duration_seconds_total // 60
+        seconds = duration_seconds_total % 60
+        if minutes > 0:
+            duration_str = f"{minutes} мин. {seconds} сек."
+        else:
+            duration_str = f"{seconds} сек."
 
         result_photo = BufferedInputFile(stylized_image_bytes, filename="stylized_result.jpg")
-        await message.answer_photo(result_photo, caption="Готово! Вот ваш стилизованный шедевр. 🖼️")
+        final_caption = (
+            "Готово! Вот ваш стилизованный шедевр. 🖼️\n\n"
+            f"⏱️ Время на стилизацию: примерно {duration_str}"
+        )
+        await message.answer_photo(result_photo, caption=final_caption)
     except NSTModelNotInitializedError:
         logger.error("NST engine was not initialized when called.")
         await message.answer(
@@ -299,7 +290,6 @@ async def nst_content_image_received(
             "Пожалуйста, попробуйте позже или /cancel."
         )
     finally:
-        # Удаляем временные файлы
         if Path(temp_content_path).exists():
             try:
                 os.remove(temp_content_path)
@@ -309,24 +299,24 @@ async def nst_content_image_received(
 
         if (
             not style_is_default and Path(style_image_path).exists()
-        ):  # Удаляем стиль, только если он был загружен пользователем
+        ):  # Delete style only if it was uploaded by the user
             try:
                 os.remove(style_image_path)
                 logger.info(f"Removed temporary style image: {style_image_path}")
             except OSError as e:
                 logger.error(f"Error removing temporary style image {style_image_path}: {e}")
 
-        try:  # Удаляем сообщение "Обработка..."
+        try:
             await bot.delete_message(
                 chat_id=processing_msg.chat.id, message_id=processing_msg.message_id
             )
         except Exception:
-            pass  # Не критично, если не удалилось
+            pass
 
         await state.clear()
 
 
-@router.message(NSTStates.waiting_for_content_image)  # Если не фото и не /cancel
+@router.message(NSTStates.waiting_for_content_image)  # If not a photo and not /cancel
 async def nst_content_image_invalid(message: Message):
     await message.answer(
         "Это не похоже на картинку. Пожалуйста, отправь картинку для КОНТЕНТА "
