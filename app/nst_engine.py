@@ -28,11 +28,13 @@ class NSTEngine:
         self.cnn_model = None
         self.cnn_normalization_mean = None
         self.cnn_normalization_std = None
+        self.default_styles = {}
         self._initialized = False
 
         try:
             self._determine_device_and_image_size()
             self._load_model()
+            self._load_default_styles()
             self._initialized = True
             logger.info(
                 f"NSTEngine initialized. Device: {self.device}, Image Size: {self.image_size}"
@@ -57,14 +59,18 @@ class NSTEngine:
                 determined_device_str = "cuda"
                 image_size = self.config.IMAGE_SIZE_CUDA
             else:
-                logger.warning("CUDA preferred in config but not available. Falling back to CPU.")
+                logger.warning(
+                    "CUDA preferred in config but not available. Falling back to CPU."
+                )
                 determined_device_str = "cpu"
                 image_size = self.config.IMAGE_SIZE_CPU
         elif pref == "cpu":
             determined_device_str = "cpu"
             image_size = self.config.IMAGE_SIZE_CPU
         else:
-            logger.warning(f"Unknown device preference '{pref}' in config. Falling back to CPU.")
+            logger.warning(
+                f"Unknown device preference '{pref}' in config. Falling back to CPU."
+            )
             determined_device_str = "cpu"
             image_size = self.config.IMAGE_SIZE
 
@@ -92,7 +98,9 @@ class NSTEngine:
                 logger.error("MODEL_TYPE is 'shrunk_object' but MODEL_PATH is not set.")
             elif model_path_abs.exists():
                 try:
-                    logger.info(f"Loading SHRUNK VGG19 model OBJECT from: {model_path_abs}")
+                    logger.info(
+                        f"Loading SHRUNK VGG19 model OBJECT from: {model_path_abs}"
+                    )
                     loaded_model_features = torch.load(
                         model_path_abs,
                         map_location=self.device,
@@ -109,19 +117,27 @@ class NSTEngine:
                         exc_info=True,
                     )
             else:
-                logger.error(f"MODEL_TYPE is 'shrunk_object' but file {model_path_abs} not found.")
+                logger.error(
+                    f"MODEL_TYPE is 'shrunk_object' but file {model_path_abs} not found."
+                )
 
         elif model_type == "full_statedict":
             if not model_config_path_str:
-                logger.error("MODEL_TYPE is 'full_statedict' but MODEL_PATH is not set.")
+                logger.error(
+                    "MODEL_TYPE is 'full_statedict' but MODEL_PATH is not set."
+                )
             elif model_path_abs.exists():
                 try:
-                    logger.info(f"Loading FULL VGG19 weights from state_dict: {model_path_abs}")
+                    logger.info(
+                        f"Loading FULL VGG19 weights from state_dict: {model_path_abs}"
+                    )
                     cnn_model_instance = vgg19(weights=None)
                     state_dict = torch.load(model_path_abs, map_location=self.device)
                     cnn_model_instance.load_state_dict(state_dict)
                     self.cnn_model = cnn_model_instance.features.to(self.device).eval()
-                    logger.info(f"Successfully loaded full VGG19 weights from {model_path_abs}")
+                    logger.info(
+                        f"Successfully loaded full VGG19 weights from {model_path_abs}"
+                    )
                     model_loaded_successfully = True
                 except Exception as e:
                     logger.error(
@@ -129,7 +145,9 @@ class NSTEngine:
                         exc_info=True,
                     )
             else:
-                logger.error(f"MODEL_TYPE is 'full_statedict' but file {model_path_abs} not found.")
+                logger.error(
+                    f"MODEL_TYPE is 'full_statedict' but file {model_path_abs} not found."
+                )
 
         if not model_loaded_successfully:
             raise RuntimeError(
@@ -139,8 +157,32 @@ class NSTEngine:
             )
 
         # Normalization
-        self.cnn_normalization_mean = torch.tensor(self.config.NORMALIZATION_MEAN).to(self.device)
-        self.cnn_normalization_std = torch.tensor(self.config.NORMALIZATION_STD).to(self.device)
+        self.cnn_normalization_mean = torch.tensor(self.config.NORMALIZATION_MEAN).to(
+            self.device, dtype=torch.float
+        )
+        self.cnn_normalization_std = torch.tensor(self.config.NORMALIZATION_STD).to(
+            self.device, dtype=torch.float
+        )
+
+    def _load_default_styles(self):
+        if not self.config.DEFAULT_STYLE_IMAGE_DIR.exists():
+            logger.warning(
+                f"Default style directory not found: {self.config.DEFAULT_STYLE_IMAGE_DIR}"
+            )
+            return
+
+        styles = {}
+        for item in self.config.DEFAULT_STYLE_IMAGE_DIR.iterdir():
+            if item.is_file() and item.suffix.lower() in [".png", ".jpg", ".jpeg"]:
+                display_name = item.stem.replace("_", " ").capitalize()
+                styles[item.name] = display_name
+
+        self.default_styles = styles
+        logger.info(f"Loaded {len(self.default_styles)} default NST styles.")
+
+    def get_available_styles(self) -> dict[str, str]:
+        """Returns the dictionary of available default styles."""
+        return self.default_styles
 
     class ContentLoss(nn.Module):
         def __init__(self, target):
@@ -181,16 +223,23 @@ class NSTEngine:
 
     def _image_loader(self, image_path_or_bytes):
         if not self._initialized:
-            raise NSTModelNotInitializedError("NSTEngine is not initialized. Cannot load image.")
+            raise NSTModelNotInitializedError(
+                "NSTEngine is not initialized. Cannot load image."
+            )
         loader_transform = transforms.Compose(
-            [transforms.Resize((self.image_size, self.image_size)), transforms.ToTensor()]
+            [
+                transforms.Resize((self.image_size, self.image_size)),
+                transforms.ToTensor(),
+            ]
         )
         if isinstance(image_path_or_bytes, (str, Path)):
             image = Image.open(image_path_or_bytes).convert("RGB")
         elif isinstance(image_path_or_bytes, bytes):
             image = Image.open(io.BytesIO(image_path_or_bytes)).convert("RGB")
         else:
-            raise ValueError("image_path_or_bytes must be a file path (str/Path) or bytes.")
+            raise ValueError(
+                "image_path_or_bytes must be a file path (str/Path) or bytes."
+            )
         image = loader_transform(image).unsqueeze(0)
         return image.to(self.device, torch.float)
 
@@ -257,7 +306,7 @@ class NSTEngine:
                 model.add_module(f"style_loss_{i}", style_loss)
                 style_losses.append(style_loss)
 
-        # Обрезаем модель до последнего слоя потерь
+        # Crop the model to the last layer of losses
         for i_crop in range(len(model) - 1, -1, -1):
             if isinstance(model[i_crop], NSTEngine.ContentLoss) or isinstance(
                 model[i_crop], NSTEngine.StyleLoss
@@ -268,11 +317,15 @@ class NSTEngine:
 
     def _get_input_optimizer(self, input_img_tensor):
         if not self._initialized:
-            raise NSTModelNotInitializedError("NSTEngine is not initialized. Cannot get optimizer.")
+            raise NSTModelNotInitializedError(
+                "NSTEngine is not initialized. Cannot get optimizer."
+            )
         optimizer = optim.LBFGS([input_img_tensor.requires_grad_()])
         return optimizer
 
-    def _run_style_transfer_core(self, content_img_tensor, style_img_tensor, input_img_tensor):
+    def _run_style_transfer_core(
+        self, content_img_tensor, style_img_tensor, input_img_tensor
+    ):
         if not self._initialized:
             raise NSTModelNotInitializedError(
                 "NSTEngine is not initialized. Cannot run style transfer core."

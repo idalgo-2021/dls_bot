@@ -66,7 +66,11 @@ async def on_startup(bot: Bot, dispatcher: Dispatcher):
             return
         webhook_url = str(settings.WEBHOOK_URL).rstrip("/") + settings.WEBHOOK_PATH
         logger.info(f"Setting webhook to: {webhook_url}")
-        secret = settings.WEBHOOK_SECRET.get_secret_value() if settings.WEBHOOK_SECRET else None
+        secret = (
+            settings.WEBHOOK_SECRET.get_secret_value()
+            if settings.WEBHOOK_SECRET
+            else None
+        )
 
         params_to_set_webhook = {
             "url": webhook_url,
@@ -75,17 +79,23 @@ async def on_startup(bot: Bot, dispatcher: Dispatcher):
         }
 
         if settings.WEBHOOK_CERT_PATH:
-            logger.info(f"Attempting to use self-signed certificate: {settings.WEBHOOK_CERT_PATH}")
+            logger.info(
+                f"Attempting to use self-signed certificate: {settings.WEBHOOK_CERT_PATH}"
+            )
             try:
                 cert_file = FSInputFile(settings.WEBHOOK_CERT_PATH)
                 params_to_set_webhook["certificate"] = cert_file
             except Exception as e:
-                logger.error(f"Error preparing certificate file {settings.WEBHOOK_CERT_PATH}: {e}")
+                logger.error(
+                    f"Error preparing certificate file {settings.WEBHOOK_CERT_PATH}: {e}"
+                )
                 return
         try:
             await bot.set_webhook(**params_to_set_webhook)
             webhook_info = await bot.get_webhook_info()
-            logger.info(f"Webhook has been set successfully. Current info: {webhook_info}")
+            logger.info(
+                f"Webhook has been set successfully. Current info: {webhook_info}"
+            )
         except Exception as e:
             logger.error(f"Failed to set webhook: {e}", exc_info=True)
 
@@ -122,7 +132,9 @@ async def on_shutdown(bot: Bot, dispatcher: Dispatcher):
     logger.info("Bot stopped.")
 
 
-def create_bot_and_dispatcher(settings: Settings, storage: MemoryStorage) -> tuple[Bot, Dispatcher]:
+def create_bot_and_dispatcher(
+    settings: Settings, storage: MemoryStorage
+) -> tuple[Bot, Dispatcher]:
     bot = Bot(
         token=settings.TELEGRAM_BOT_TOKEN.get_secret_value(),
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
@@ -146,7 +158,9 @@ def create_bot_and_dispatcher(settings: Settings, storage: MemoryStorage) -> tup
                     "NST functionality is disabled."
                 )
         except Exception as e:
-            logger.critical(f"Critical error during NSTEngine initialization: {e}", exc_info=True)
+            logger.critical(
+                f"Critical error during NSTEngine initialization: {e}", exc_info=True
+            )
     else:
         logger.info("NST config not found, NST functionality is disabled.")
 
@@ -166,7 +180,8 @@ def create_bot_and_dispatcher(settings: Settings, storage: MemoryStorage) -> tup
                 )
         except Exception as e:
             logger.critical(
-                f"Critical error during CycleGANEngine initialization: {e}", exc_info=True
+                f"Critical error during CycleGANEngine initialization: {e}",
+                exc_info=True,
             )
     else:
         logger.info("CycleGAN config not found, CycleGAN functionality is disabled.")
@@ -182,13 +197,6 @@ def create_bot_and_dispatcher(settings: Settings, storage: MemoryStorage) -> tup
 
 
 async def main():
-    # # Checking .env file existence
-    # env_path = Path(".env")
-    # if not env_path.is_file():
-    #     logger.critical(f"The environment file was not found on the path: {env_path.resolve()}")
-    #     logger.critical("Please create a file.env based on .env.example and fill it in.")
-    #     sys.exit(1)
-
     storage = MemoryStorage()
 
     # Load settings and validate environment
@@ -212,7 +220,9 @@ async def main():
 
         elif app_settings.BOT_RUN_MODE == "webhook":
             if not app_settings.WEBHOOK_URL or not app_settings.WEBHOOK_PORT:
-                logger.error(("WEBHOOK_URL and WEBHOOK_PORT must be set for " "webhook mode."))
+                logger.error(
+                    ("WEBHOOK_URL and WEBHOOK_PORT must be set for " "webhook mode.")
+                )
                 return
 
             app = web.Application()

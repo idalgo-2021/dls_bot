@@ -20,7 +20,6 @@ jobs:
 
       - name: Build Docker image on VPS
         run: docker build -t dls_bot_vps:latest .
-        # run: docker build --load -t dls_bot_vps:latest . 
         # 'docker build': стандартная команда для сборки Docker-образа.
         # '--load': флаг для Docker Buildx, который гарантирует, что собранный образ
         #           будет загружен в локальный Docker image store на VPS.

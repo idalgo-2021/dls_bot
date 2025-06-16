@@ -43,7 +43,9 @@ def load_cyclegan_config(path: Path = CONFIG_FILE_PATH) -> CycleGANConfig:
     except yaml.YAMLError as e:
         raise ValueError(f"Invalid CycleGAN config at {path}: {e}")
     except Exception as e:
-        logger.error(f"Unexpected error loading CycleGAN config file {path}: {e}", exc_info=True)
+        logger.error(
+            f"Unexpected error loading CycleGAN config file {path}: {e}", exc_info=True
+        )
         raise
 
 
@@ -51,6 +53,7 @@ try:
     cyclegan_params = load_cyclegan_config()
 except (FileNotFoundError, ValueError, Exception) as e:
     logger.warning(
-        f"Could not load CycleGAN parameters: {e}. " "CycleGAN functionality will be disabled."
+        f"Could not load CycleGAN parameters: {e}. "
+        "CycleGAN functionality will be disabled."
     )
     cyclegan_params = None

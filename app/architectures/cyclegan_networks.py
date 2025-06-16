@@ -61,7 +61,12 @@ class ResnetGenerator(nn.Module):
             mult = 2**i
             model += [
                 nn.Conv2d(
-                    ngf * mult, ngf * mult * 2, kernel_size=3, stride=2, padding=1, bias=use_bias
+                    ngf * mult,
+                    ngf * mult * 2,
+                    kernel_size=3,
+                    stride=2,
+                    padding=1,
+                    bias=use_bias,
                 ),
                 norm_layer(ngf * mult * 2),
                 nn.ReLU(True),

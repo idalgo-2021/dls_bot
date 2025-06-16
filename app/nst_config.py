@@ -26,8 +26,12 @@ class NSTConfig:
             self.IMAGE_SIZE_CUDA = int(data.get("IMAGE_SIZE_CUDA", self.IMAGE_SIZE))
 
             # Normalization for VGG19 (ImageNet)
-            self.NORMALIZATION_MEAN = data.get("NORMALIZATION_MEAN", [0.485, 0.456, 0.406])
-            self.NORMALIZATION_STD = data.get("NORMALIZATION_STD", [0.229, 0.224, 0.225])
+            self.NORMALIZATION_MEAN = data.get(
+                "NORMALIZATION_MEAN", [0.485, 0.456, 0.406]
+            )
+            self.NORMALIZATION_STD = data.get(
+                "NORMALIZATION_STD", [0.229, 0.224, 0.225]
+            )
 
             # Layers
             self.CONTENT_LAYERS = data.get("CONTENT_LAYERS", ["conv_4"])
@@ -64,5 +68,7 @@ def load_nst_config(path: Path = CONFIG_FILE_PATH) -> NSTConfig:
 try:
     nst_params = load_nst_config()
 except (FileNotFoundError, ValueError, Exception) as e:
-    logger.warning(f"Could not load NST parameters: {e}. NST functionality will be disabled.")
+    logger.warning(
+        f"Could not load NST parameters: {e}. NST functionality will be disabled."
+    )
     nst_params = None

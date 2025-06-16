@@ -49,12 +49,16 @@ class CycleGANEngine:
             if torch.cuda.is_available():
                 determined_device_str = "cuda"
             else:
-                logger.warning("CUDA preferred in config but not available. Falling back to CPU.")
+                logger.warning(
+                    "CUDA preferred in config but not available. Falling back to CPU."
+                )
                 determined_device_str = "cpu"
         elif pref == "cpu":
             determined_device_str = "cpu"
         else:
-            logger.warning(f"Unknown device preference '{pref}' in config. Falling back to CPU.")
+            logger.warning(
+                f"Unknown device preference '{pref}' in config. Falling back to CPU."
+            )
             determined_device_str = "cpu"
 
         self.device = torch.device(determined_device_str)
@@ -71,13 +75,17 @@ class CycleGANEngine:
         for style_name, style_info in styles.items():
             model_filename = style_info.get("model_file")
             if not model_filename:
-                logger.warning(f"No 'model_file' specified for style '{style_name}'. Skipping.")
+                logger.warning(
+                    f"No 'model_file' specified for style '{style_name}'. Skipping."
+                )
                 continue
 
             model_path = self.config.MODELS_DIR / Path(model_filename).name
 
             if not model_path.exists():
-                logger.warning(f"Model file not found for style '{style_name}': {model_path}")
+                logger.warning(
+                    f"Model file not found for style '{style_name}': {model_path}"
+                )
                 continue
 
             try:
@@ -92,12 +100,16 @@ class CycleGANEngine:
                     n_blocks=self.config.NUM_RESIDUAL_BLOCKS,
                 )
 
-                netG.load_state_dict(torch.load(model_path, map_location=self.device), strict=False)
+                netG.load_state_dict(
+                    torch.load(model_path, map_location=self.device), strict=False
+                )
 
                 netG.to(self.device).eval()
 
                 self.models[style_name] = netG
-                logger.info(f"Successfully loaded CycleGAN model for style: {style_name}")
+                logger.info(
+                    f"Successfully loaded CycleGAN model for style: {style_name}"
+                )
             except Exception as e:
                 logger.error(
                     f"Failed to load model for style '{style_name}' from {model_path}: {e}",
@@ -127,15 +139,10 @@ class CycleGANEngine:
 
     def _tensor_to_pil_image(self, tensor: torch.Tensor) -> Image.Image:
         output_image = tensor.detach().squeeze(0).cpu()
-        output_image = output_image * 0.5 + 0.5  # Денормализация
+        output_image = output_image * 0.5 + 0.5  # Denormalization
         return transforms.ToPILImage()(output_image)
 
     def stylize(self, image: Image.Image, style_name: str) -> Image.Image:
-        """
-        Основной публичный метод для стилизации.
-        Принимает PIL Image и имя стиля, возвращает стилизованный PIL Image.
-        """
-        # Убираем проверку на _initialized
         if style_name not in self.models:
             raise ValueError(f"Style '{style_name}' is not a valid or loaded style.")
 

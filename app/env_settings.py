@@ -1,19 +1,16 @@
 import logging
 from pathlib import Path
 
-# from pathlib import Path
 from pydantic import (
     SecretStr,
     AnyHttpUrl,
     field_validator,
-    # ValidationInfo,
     model_validator,
 )
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 
-# , Any
 
 logger = logging.getLogger(__name__)
 
@@ -58,8 +55,10 @@ class Settings(BaseSettings):
     def process_webhook_path(self) -> "Settings":
         if self.BOT_RUN_MODE == "webhook":
             if self.WEBHOOK_PATH is None:
-                logger.info("WEBHOOK_PATH not set, defaulting to" " '/' for webhook mode.")
-                self.WEBHOOK_PATH = "/"  # default
+                logger.info(
+                    "WEBHOOK_PATH not set, defaulting to" " '/' for webhook mode."
+                )
+                self.WEBHOOK_PATH = "/"
             elif not self.WEBHOOK_PATH.startswith("/"):
                 raise ValueError("WEBHOOK_PATH must start with a '/' if provided.")
         return self

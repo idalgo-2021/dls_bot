@@ -10,6 +10,9 @@ __pycache__/
 *.pyo
 *.pyd
 
+# Pytest
+.pytest_cache/
+
 # Secrets and environment files
 .env
 

@@ -14,4 +14,4 @@ logs/
 .env 
 certs/ 
 *.pth
-
+.pytest_cache/
