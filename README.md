@@ -1,208 +1,204 @@
-# Telegram-бот для стилизации изображений
+# Telegram Bot for Image Stylization
 
-🎓 **Итоговый проект 1 курса (весна 2025) Deep Learning School МФТИ**
+*[Read this document in Russian](README.ru.md)*
+
+🎓 **Final project of the 1st-semester course at MIPT Deep Learning School (Spring 2025)**
 
 * [Deep Learning School](https://dls.samcs.ru)
 * [Course page on stepic.org](https://stepik.org/course/230362/info)
 
-Бот предоставляет пользователю простой интерфейс для применения нейросетевых алгоритмов стилизации изображений прямо в Telegram. Поддерживаются два основных режима:
+
+This bot provides a simple interface for users to apply neural network-based image stylization algorithms directly in Telegram. Two main modes are supported:
 
 1. **Neural Style Transfer (NST)**
 
-    Перенос стиля с использованием алгоритма Леона Гатиса.
+Style transfer using the algorithm by Leon A. Gatys.
 
-    **Описание:**
-    * Пользователь загружает два изображения:
-        * Контентное изображение (основное)
-        * Стилевое изображение (стиль, который нужно перенести)
-    * Бот применяет NST и отправляет результат с наложением стиля на контентное изображение.
-    * Алгоритм сохраняет структуру контентного изображения, изменяя его визуальный стиль под стилевое.
-    * Алгоритм даёт хорошее качество, но довольно ресурсозатратный(особенно на CPU и на больших изображениях).
+**Description:**
+
+* The user uploads two images:
+    * A content image (the base image).
+    * A style image (the style to be transferred).
+* The bot applies NST and sends back the result, transferring the style onto the content image.
+* The algorithm preserves the structure of the content image while adapting its visual style to match the style image.
+* This algorithm produces high-quality results but is quite resource-intensive, especially on a CPU and with large images.
 
 2. **CycleGAN (Cycle-Consistent GAN)**
 
-    Перенос визуального стиля между доменами **без парных изображений**.
+Transfers visual style between domains without paired images.
 
-    **Описание:**
-    * Пользователь загружает **одно изображение**.
-    * Бот применяет предобученную модель CycleGAN, например:
-        * Фото → картина (в стиле Ван Гога, Моне и т.д.)
-        * Лошадь → зебра
-        * Лето → зима
-    * Бот возвращает преобразованное изображение, соответствующее выбранному направлению стилизации.
-    * Высокая эффективность и скорость.
+**Description:**
 
+* The user uploads a single image.
+* The bot applies a pre-trained CycleGAN model, for example:
+    * Photo → Painting (in the style of Van Gogh, Monet, etc.)
+    * Horse → Zebra
+    * Summer → Winter
+* The bot returns the transformed image, corresponding to the chosen stylization direction.
+* This method is highly efficient and fast.
 
-## Содержание
-- [Использованные технологии](#used_tech)
-- [Важные особенности реализации](#important_features)
-- [Запуск и настройка бота](#bot_start)
-    - [Запуск в Docker](#bot_docker)
-    - [Deploy](#bot_deploy)
-- [Возможности и функционал бота](#bot_functionality)
-- [Используемые материалы](#style_transfer)
-    - [Neural Style Transfer (алгоритм Гатиса)](#style_transfer_gatys)
+## Table of Contents
+- [Technologies Used](#used_tech)
+- [Key Implementation Features](#important_features)
+- [Setup and Launch](#bot_start)
+    - [Running with Docker](#bot_docker)
+    - [Deployment](#bot_deploy)
+- [Bot Features and Functionality](#bot_functionality)
+- [References and Materials](#style_transfer)
+    - [Neural Style Transfer (Gatys' Algorithm)](#style_transfer_gatys)
     - [CycleGAN (Cycle-Consistent Adversarial Networks)](#style_transfer_cyclegan)
  - [TODO List](#bot_todo)
 
+ <a name="used_tech"><h2>Technologies Used</h2></a>
 
+* **Language:** Python
+* **Framework:** aiogram
+* **HTTP Server:** aiohttp
+* **AI Framework:** PyTorch
 
-<a name="used_tech"><h2>Использованные технологии</h2></a>
+<a name="important_features"><h2>Key Implementation Features</h2></a>
 
-* **Язык**: Python
-* **Фреймворк**: [aiogram](https://github.com/aiogram/aiogram)
-* **HTTP-сервер**: aiohttp
-* **ИИ-фреймворк**: PyTorch
+* ✅ Asynchronous request handling.
+* ✅ Supports both polling and webhook modes.
+* ✅ Uses an .env file for managing secrets.
+* ✅ Includes a Makefile for convenient commands.
+* ✅ Ready to run in a Docker container.
+* ✅ No external databases or other persistent storage required.
+* ✅ Confidentiality: User-uploaded images and generated results are not saved on the server after processing.
+* ✅ Configurable CPU/GPU ("auto") settings and algorithm parameters via YAML files.
+* ✅ Reliability: The NST and CycleGAN engines operate independently. An initialization error in one does not affect the other.
+* ✅ No raw HTTPS traffic handling; a reverse proxy (like ngrok, DevTunnels, or Nginx) is required for webhook mode.
 
+<a name="bot_start"><h2>Setup and Launch</h2></a>
 
-<a name="important_features"><h2>Важные особенности реализации</h2></a>
+**⚠️ Important Notes:**
 
-* ✅ Асинхронная обработка запросов
-* ✅ Поддержка режимов **polling** и **webhook**
-* ✅ Использование `.env` файла для загрузки секретов
-* ✅ Использование `Makefile`
-* ✅ Возможность запуска в **Docker-контейнере**
-* ✅ Без использования баз данных и других персистентных хранилищ
-* ✅ Без сохранения изображений загруженных пользователями и изображений сформированных на их основе
-* ✅ Настраиваемые параметры CPU/GPU или "auto", а также параметры алгоритмов (через конфигурации)
-* ✅ Независимость работы движков NST и CycleGAN(при ошибке инициализации например NST - хендлер `/nst` будет работать как echo-сервер)
-* ✅ Отсутствует функциональность обработки "сырого" HTTPS-трафика, поэтому для режима `webhook` - следует использовать шлюз, или реверс-прокси(`ngrok`, `DevTunnels` и т.п.)
-
-<a name="bot_start"><h2>Запуск и настройка бота</h2></a>
-
-**⚠️ Важные замечания:** 
-* Репозиторий не содержит модели(в виду их сравнительно большого размера), поэтому их нужно будет специально скачать.
-* Для работы с моделями используется довольно "тяжелая" библиотека PyTorch, поэтому при установке зависимостей нужно быть готовым к скачиванию примерно **6 Гб**. Собираемые Docker-образы с приложением также будут занимать около **6 Гб**. 
+* The repository does not include pre-trained models due to their large size. You will need to download them separately.
+* The project relies on PyTorch, a large library. Be prepared to download approximately 6 GB of data when installing dependencies. The resulting Docker image will also be around 6 GB.
 
 ___
 
-1. Склонируйте репозиторий. 
+1. Clone the repository.
 
 ```
 git clone https://github.com/idalgo-2021/dls_bot.git
 ```
 
-2. Создайте и активируйте для проекта виртуальное окружение(рекомендуется).
+2. Create and activate a virtual environment (recommended).
 
 ```
-# Перейдите в каталог проекта
+# Navigate to the project directory
 cd dls_bot
 
-# Создайте виртуальное окружение в папке venv
+# Create a virtual environment named venv
 python -m venv venv
 
-# Активируйте виртуальное окружение
+# Activate the virtual environment
 source venv/bin/activate
 ```
 
-3. Установите все необходимые зависимости.
+3. Install the required dependencies.
 
 ```
 pip install -r requirements.txt
 ```
 
-4. Настройте переменные окружения. 
+4. Set up environment variables.
 
-Создайте и настройте `.env`-файл (см. `.env.example`).  
-
-*Для проверки работоспособности рекомендуется запустить бота в режиме `polling`, а для этого достаточно только одного параметра - `TELEGRAM_BOT_TOKEN`.*
+Create and configure an `.env` file (you can use `.env.example` as a template). To get started, you only need to set `TELEGRAM_BOT_TOKEN` and run the bot in `polling` mode.
 
 ```
-# Вставьте сюда токен вашего телеграм-бота
-TELEGRAM_BOT_TOKEN="ВАШ_ТОКЕН_ЗДЕСЬ"
+# Paste your Telegram bot token here
+TELEGRAM_BOT_TOKEN="YOUR_TOKEN_HERE"
 
-# Режим работы бота: "polling" или "webhook"
+# Bot run mode: "polling" or "webhook"
 BOT_RUN_MODE="polling"
 
-# Настройки для вебхука (если используете)
+# Settings for webhook mode (if used)
 # WEBHOOK_URL=...
 # WEBHOOK_PORT=...
 ```
 
-5. Скачайте предобученные модели.
+5. Download the pre-trained models.
 
-Сравнительно большие размеры моделей не позволили включить их в состав репозитория, поэтому пользователям предлагается самостоятельно их скачать из Интернета.  
+**CycleGAN Models:**
 
-Модели CycleGAN:
-* Данные модели скачиваются с помощью утилиты `utils/download_cyclegan_model.py`. 
-* Обратите внимание на список доступных для скачивания предобученных моделей - он представлен внутри самой утилиты.
-* После скачивания моделей убедитесь, что они корректно добавлены в список `styles` в конфигурационном файле `app/configs/cyclegan_params.yml`(модели скачаются в каталог `app/models/cyclegan`).
+* These models can be downloaded using the `utils/download_cyclegan_model.py` script.
+* The list of available models is inside the script itself.
+* After downloading, ensure they are correctly listed under `styles` in `app/configs/cyclegan_params.yml`. The models will be saved to `app/models/cyclegan/`.
 
 ```
-# Скачать модели для CycleGAN
+# Download models for CycleGAN
 python utils/download_cyclegan_model.py style_monet
 python utils/download_cyclegan_model.py style_vangogh
 ```
 
-Модель для NST:
-* В проекте используется модель VGG19, но полная VGG19 занимает 548 Мб, что довольно много. Полная модель позволит вам более гибко управлять составом слоёв извлечения признаков(параметры `CONTENT_LAYERS` и `STYLE_LAYERS` конфигурационного файла `app/configs/nst_params.yml`). Однако, сколько я не пробовал экспериментировать с данными параметрами, существенного улучшения не получил. Поэтому, для извлечения признаков, я, как предложено во многих статьях, ограничился 11-ю слоями модели VGG19. По итогу, результаты получаются такие же, как и с полной моделью, но обрезанная модель занимает всего 2.1 Мб. Поэтому я рекомендую не полную модель, а обрезанную. Обрезанную модель можно получить с помощью утилиты `utils/shrinker_vgg19.py`(модель скачается в каталог `app/models/nst`).
-* *Если вам всеже потребуется полная VGG19, скачать её можно здесь - [VGG19 (vgg19-dcbb9e9d.pth) 548 Мб](https://download.pytorch.org/models/vgg19-dcbb9e9d.pth).*
+**NST Model (VGG19):**
 
-* *При использовании полной модели незабудьте указать корректный MODEL_TYPE: "full_statedict"(для урезанной модели этот параметр можно закомментировать).* 
+We recommend using a "shrunk" version of the VGG19 model. It produces similar quality results but is only 2.1 MB instead of 548 MB.
+
+* To download the recommended shrunk model (2.1 MB):
 
 ```
-# Скачать обрезанную VGG19
 python utils/shrinker_vgg19.py
 ```
 
+* If you need the full VGG19 model (548 MB): You can download it from this link. If you use it, be sure to set `MODEL_TYPE` in `app/configs/nst_params.yml` to "full_statedict".
 
-6. Выполните запуск бота.
+6. Run the bot.
 
 ```
-# Команда запуска приложения
+# Command to start the application
 python -m app.bot
 ```
 
-7. Для запуска в режиме `webhook` необходимо выполнить соответствующие настройки в  `.env`-файле, а так же пробросить соответствующий порт в Интернет. Если запуск выполняется локально, то удобно использовать `devtunnels` или `ngrok`. Если вы используете шлюз, реверс-прокси(Nginx или др.) и какой-то другой сервис обработки "сырого" https - выполните соответствующие настройки портов и использование сертификатов.
+<a name="bot_docker"><h3>Running with Docker</h3></a>
 
-
-<a name="bot_docker"><h3>Запуск в Docker</h3></a>
-
-Для запуска(локально) внутри Docker-контейнера рекомендуется использовать `Makefile`:
+Use the provided Makefile for easy local execution inside a Docker container:
 
 ```
-# Основные команды
+# Main commands
 
-# Собрать Docker-образ
+# Build the Docker image
 make build 
 
-# Запустить Docker-контейнер в режиме polling
+# Run the Docker container in polling mode
 make run 
 
-# Запустить Docker-контейнер в режиме webhook
-make run-webhook     
+# Run the Docker container in webhook mode
+make run-webhook
 ```
 
-<a name="bot_deploy"><h3>Deploy</h3></a>
+<a name="bot_deploy"><h3>Deployment</h3></a>
 
-* Рекомендуется настроить процесс развертывания с использованием Git и сборкой Docker-контейнеров непосредственно на удаленном сервере(учитывая размер PyTorch и моделей). Подготовленные модели скопировать на VPS и монтировать к Docker-образу.
+* It is recommended to set up a deployment process using Git, building the Docker image directly on the remote server (given the size of PyTorch and the models). The pre-trained models should be copied to the VPS and mounted as a volume.
+* For webhook mode, you'll need a reverse proxy like Nginx to handle HTTPS traffic and forward it to the bot's HTTP server.
 
 <details>
-<summary>Пример моего процесса CI/CD и деплоя на AWS VPS</summary>
+<summary>Example of my CI/CD and deployment process on an AWS VPS</summary>
 
-Для развертывания, я использовал VPS(vCPU: 2, ОЗУ:2 Гб, SSD: 60 Гб) от AWS с бесплатным 90-дневным использованием. Без GPU(CUDA).
+For deployment, I used an AWS VPS (vCPU: 2, RAM: 2 GB, SSD: 60 GB) without a GPU.
 
-В моём проекте CI/CD построен так, что сборка выполняется на VPS(используется технология GitHub Self hosted runners). При этом, ранее скачанные модели монтируются в Docker - cм. `.github/workflows/deploy-on-vps.yml`.
+My CI/CD pipeline is built using GitHub Self-hosted runners, where the build process runs directly on the VPS. The pre-trained models are stored on the server and mounted into the Docker container during runtime. You can see the setup in .github/workflows/deploy-on-vps.yml.
 
-При развертывании, в качестве обработчика "сырого" https-трафика на VPS, я развернул реверс-прокси Nginx. Поскольку я не использовал выделенный домен, я сгенерировал самоподписанный сертификат и использовал его через переменную окружения `WEBHOOK_CERT_PATH`.
+I set up an Nginx reverse proxy on the VPS to handle raw HTTPS traffic. Since I didn't use a dedicated domain, I generated a self-signed certificate and passed its path to the container via the WEBHOOK_CERT_PATH environment variable.
 
-Поскольку модели нейронных сетей не включены в репозиторий, то для того, чтобы они были доступны приложению, я разместил их на сервере VPS и в скрипте запуска Docker-контейнера монтирую к соответствующему каталогу. 
+Here are the scripts to run the Docker container:
 
-</details>
-
+**Polling Mode:**
 
 ```
-# Скрипт для запуска образа Docker-контейнера в режиме `polling`
 docker run -d \
   --name dls_bot_instance \
   --restart unless-stopped \
   --env-file /home/ubuntu/dls_bot_config/.env \
   -v /home/ubuntu/dls_bot_data/models:/usr/src/app/app/models \
   dls_bot_vps:latest 
+```
+
+**Webhook Mode:**
 
 ```
-```
-# Скрипт для запуска образа Docker-контейнера в режиме `webhook`
 docker run -d \
   --name dls_bot_instance \
   --restart unless-stopped \
@@ -213,57 +209,47 @@ docker run -d \
   dls_bot_vps:latest
 ```
 
+</details>
+
+<a name="bot_functionality"><h2>Bot Features and Functionality</h2></a>
+
+**General Commands:**
+
+* **/start:** Displays a welcome message and an overview of the bot's features.
+* **/help:** Shows a list of all available commands.
+* **/cancel:** Cancels the current operation (useful for the NST or CycleGAN flows).
+
+**Special Commands:**
+
+* **/nst:** Starts the Neural Style Transfer flow. The bot will ask you to choose a pre-defined style or upload your own, and then to upload a content image.
+* **/cyclegan:** Starts the CycleGAN flow. The bot will ask you to select a style and then upload a content image to apply it to.
+
+**Note:** If you send any other text, the bot will act as an echo server and simply repeat your message. For convenience, both the NST and CycleGAN flows include a "Cancel" button.
+
+<a name="style_transfer"><h2>References and Materials</h2></a>
+
+<a name="style_transfer_gatys"><h3>Neural Style Transfer (Gatys' Algorithm)</h3></a>
 
 
-<a name="bot_functionality"><h2>Возможности и функционал бота</h2></a>
-
-**Общие команды:**
-
-* **/start** - Стартовая страница бота(бот приветствует пользователя и сообщает о своих основных функциональных возможностях).
-* **/help** - Справочная страница(бот выводит перечень поддерживаемых команд).
-* **/cancel** - Отмена текущей операции(имеет смысл при флоу, использующих FSM, т.е. NST или CycleGAN).
-
-**Специальные команды:**
-
-* **/nst** - Флоу NST(Neural Style Transfer). Бот предложит выбрать из имеющихся, либо загрузить своё изображение со стилем(которые необходимо перенести), а затем предложит загрузить контентное изображение, т.е. то, к которому нужно применить стиль(с первого изображения). При необходимости, выполнение флоу можно прервать командой `/cancel`. 
-
-* **/cyclegan** - Флоу CycleGAN(Cycle-Consistent GAN). Сначала бот предложит выбрать стилистику из имеющихся моделей стилей, а затем загрузить контентное изображение, т.е. то, к которому нужно применить стиль. При необходимости, выполнение флоу можно прервать командой **/cancel**. 
-
-
-**Примечание:** 
-* Если отправить боту неописанную выше команду, например случайный текст, то бот отработает запрос как обычный echo-сервер, т.е. просто вернет введенное значение.
-* Если при инициализации одного из движков стилизации произойдет ошибка, то данный движек не будет работать, а соответствующая команда(`/nst` или `/cyclegan`) будет обработана как echo-запрос. 
-* Для удобства пользования в флоу NST и CycleGAN предусмотрена кнопка "Отмена"(чтобы не вводить `/cancel`).
-
-
-<a name="style_transfer"><h2>Используемые материалы</h2></a>
-
-
-<a name="style_transfer_gatys"><h3>Neural Style Transfer (алгоритм Гатиса)</h3></a>
-
-
-* Статья в arxiv.org: [A Neural Algorithm of Artistic Style](https://arxiv.org/abs/1508.06576)
-* Статья со сквозным примером: [Neural Transfer Using PyTorch](https://docs.pytorch.org/tutorials/advanced/neural_style_tutorial.html)
-* [Ноутбук из статьи (с небольшой адаптацией)](./docs/neural_style_tutorial.ipynb)  
-
+* Paper on arxiv.org: [A Neural Algorithm of Artistic Style](https://arxiv.org/abs/1508.06576)
+* PyTorch Tutorial: [Neural Transfer Using PyTorch](https://docs.pytorch.org/tutorials/advanced/neural_style_tutorial.html)
+* [Adapted Tutorial Notebook](./docs/neural_style_tutorial.ipynb)  
 
 
 <a name="style_transfer_cyclegan"><h3>CycleGAN (Cycle-Consistent Adversarial Networks)</h3></a>
 
-* Статья из рекомендованных материалов: [Understanding and Implementing CycleGAN in TensorFlow](https://hardikbansal.github.io/CycleGANBlog/)
-* Репозиторий из рекомендованных: [https://github.com/luanfujun/deep-photo-styletransfer](https://github.com/luanfujun/deep-photo-styletransfer)
-* Статья в arxiv.org: [Unpaired Image-to-Image Translation
+* Recommended Article: [Understanding and Implementing CycleGAN in TensorFlow](https://hardikbansal.github.io/CycleGANBlog/)
+* Paper on arxiv.org [Unpaired Image-to-Image Translation
 using Cycle-Consistent Adversarial Networks](https://arxiv.org/abs/1703.10593)
-* Репозиторий: [https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix] - *из данного репозитория взят код для `app/architectures/cyclegan_networks.py`, а именно классы ResnetGenerator и ResnetBlock*.
+* GitHub Repository: [https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix] - *The code for ResnetGenerator and ResnetBlock in `app/architectures/cyclegan_networks.py` was adapted from this repository.*.
 
-   
 
 <a name="bot_todo"><h2>TODO List</h2></a>
 
-1. Добавить таймауты для FSM-состояний, чтобы "зависшие" сессии автоматически отменялись.
-2. Рефакторинг NST: обрабатывать изображения в памяти (io.BytesIO), а не сохранять во временные файлы.
-3. Улучшить скорость и отзывчивость(ограничения ресурсов для Docker), вопросы производительности(vps с cuda и т.п.). 
-4. Раширить функциональность(новые методы, алгоритмы, типы сетей и т.п.).
-5. Проработать модульность, либо вообще перейти к микросервисам для каждого метода и т.п.(лучше масштабируемость, поддерживаемость, тестирование и т.д.)
-6. Логи, метрики и т.п.
-7. Постоянный рефакторинг и улучшение кодовой базы.
+1. **FSM Timeouts:** Add timeouts to automatically cancel "stuck" user sessions.
+2. **NST Refactoring:** Process images in-memory (io.BytesIO) instead of saving them as temporary files, similar to the CycleGAN implementation.
+3. **Performance Improvements:** Optimize Docker resource limits and explore performance on a VPS with CUDA support.
+4. **Expand Functionality:** Add new stylization methods, algorithms, and network types.
+5. **Modularity:** Consider refactoring into microservices for better scalability, maintainability, and testing.
+6. **Monitoring:** Implement logging, metrics, and alerts.
+7. **Continuous Refactoring:** Consistently improve and clean up the codebase.
