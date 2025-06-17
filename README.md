@@ -23,6 +23,19 @@ Style transfer using the algorithm by Leon A. Gatys.
 * The algorithm preserves the structure of the content image while adapting its visual style to match the style image.
 * This algorithm produces high-quality results but is quite resource-intensive, especially on a CPU and with large images.
 
+<details>
+<summary>NST Examples:</summary>
+
+![](docs/example_images/nst/vangogh_bishkek.png)
+
+![](docs/example_images/nst/manface_bishkek.jpg)
+
+![](docs/example_images/nst/vaves_horses.jpg)
+
+</details>
+<br><br>
+
+
 2. **CycleGAN (Cycle-Consistent GAN)**
 
 Transfers visual style between domains without paired images.
@@ -36,6 +49,19 @@ Transfers visual style between domains without paired images.
     * Summer → Winter
 * The bot returns the transformed image, corresponding to the chosen stylization direction.
 * This method is highly efficient and fast.
+
+<details>
+<summary>CycleGAN Examples:</summary>
+
+![](docs/example_images/cyclegan/horse2zebra1.jpg)
+
+![](docs/example_images/cyclegan/horse2zebra2.jpg)
+
+![](docs/example_images/cyclegan/vangogh_style.jpg)
+
+</details>
+<br><br>
+
 
 ## Table of Contents
 - [Technologies Used](#used_tech)

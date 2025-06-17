@@ -19,6 +19,19 @@
     * Алгоритм сохраняет структуру контентного изображения, изменяя его визуальный стиль под стилевое.
     * Алгоритм даёт хорошее качество, но довольно ресурсозатратный(особенно на CPU и на больших изображениях).
 
+<details>
+<summary>Примеры работы NST:</summary>
+
+![](docs/example_images/nst/vangogh_bishkek.png)
+
+![](docs/example_images/nst/manface_bishkek.jpg)
+
+![](docs/example_images/nst/vaves_horses.jpg)
+
+</details>
+<br><br>
+
+
 2. **CycleGAN (Cycle-Consistent GAN)**
 
     Перенос визуального стиля между доменами **без парных изображений**.
@@ -32,6 +45,17 @@
     * Бот возвращает преобразованное изображение, соответствующее выбранному направлению стилизации.
     * Высокая эффективность и скорость.
 
+<details>
+<summary>Примеры работы CycleGAN:</summary>
+
+![](docs/example_images/cyclegan/horse2zebra1.jpg)
+
+![](docs/example_images/cyclegan/horse2zebra2.jpg)
+
+![](docs/example_images/cyclegan/vangogh_style.jpg)
+
+</details>
+<br><br>
 
 ## Содержание
 - [Использованные технологии](#used_tech)
