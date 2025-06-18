@@ -169,7 +169,7 @@ We recommend using a "shrunk" version of the VGG19 model. It produces similar qu
 python utils/shrinker_vgg19.py
 ```
 
-* If you need the full VGG19 model (548 MB): You can download it from this link. If you use it, be sure to set `MODEL_TYPE` in `app/configs/nst_params.yml` to "full_statedict".
+* If you need the full VGG19 model (548 MB): You can download it from this link - - [VGG19 (vgg19-dcbb9e9d.pth)](https://download.pytorch.org/models/vgg19-dcbb9e9d.pth). If you use it, be sure to set `MODEL_TYPE` in `app/configs/nst_params.yml` to "full_statedict".
 
 6. Run the bot.
 
@@ -201,7 +201,7 @@ make run-webhook
 * For webhook mode, you'll need a reverse proxy like Nginx to handle HTTPS traffic and forward it to the bot's HTTP server.
 
 <details>
-<summary>Example of my CI/CD and deployment process on an AWS VPS</summary>
+<summary>Example of my CI/CD and deployment process on an AWS VPS:</summary>
 
 For deployment, I used an AWS VPS (vCPU: 2, RAM: 2 GB, SSD: 60 GB) without a GPU.
 
