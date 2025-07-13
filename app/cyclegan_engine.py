@@ -101,7 +101,11 @@ class CycleGANEngine:
                 )
 
                 netG.load_state_dict(
-                    torch.load(model_path, map_location=self.device), strict=False
+                    torch.load(
+                        model_path,
+                        map_location=self.device
+                    ),
+                    strict=False
                 )
 
                 netG.to(self.device).eval()

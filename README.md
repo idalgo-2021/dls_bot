@@ -73,7 +73,8 @@ Transfers visual style between domains without paired images.
 - [References and Materials](#style_transfer)
     - [Neural Style Transfer (Gatys' Algorithm)](#style_transfer_gatys)
     - [CycleGAN (Cycle-Consistent Adversarial Networks)](#style_transfer_cyclegan)
- - [TODO List](#bot_todo)
+- [The results of self-study of the CycleGAN model](#self_study_cyclegan)    
+- [TODO List](#bot_todo)
 
  <a name="used_tech"><h2>Technologies Used</h2></a>
 
@@ -270,12 +271,56 @@ using Cycle-Consistent Adversarial Networks](https://arxiv.org/abs/1703.10593)
 * GitHub Repository: [https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix] - *The code for ResnetGenerator and ResnetBlock in `app/architectures/cyclegan_networks.py` was adapted from this repository.*.
 
 
+
+<a name="self_study_cyclegan"><h2>The results of self-study of the CycleGAN model</h2></a>
+
+As part of this project, I conducted an experiment to train a CycleGAN model from scratch. The goal was to teach the model to transform photos of human faces into the artistic style of "The Simpsons" cartoon.
+
+**Training Process**
+
+The training pipeline was based on the official PyTorch implementation: [pytorch-CycleGAN-and-pix2pix](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix). The CelebFaces Attributes Dataset (CelebA) and The Simpsons Characters Dataset were used as the respective data sources.
+
+The model was trained in the Google Colab environment (free tier with a T4 GPU) for approximately 100 epochs.
+
+* The complete training pipeline is available in this Jupyter Notebook: [Mikha_CycleGAN_pipeline.ipynb](./docs/Mikha_CycleGAN_pipeline.ipynb)  
+
+**Results and Conclusions**
+
+The resulting model, faces2simpsons.pth, is integrated into the demo version of the bot and can be enabled in the configuration:
+
+```
+# app/configs/cyclegan_params.yml
+
+styles:
+  ... 
+  ...
+  face2simpson:
+    display_name: "Лицо в Симпсона"
+    model_file: "faces2simpsons.pth" 
+```
+
+**Example Results:**
+
+<details>
+<summary>Примеры работы CycleGAN:</summary>
+
+![](docs/example_images/cyclegan/result_my_cyclegan.jpg)
+
+</details>
+<br><br>
+
+
+**Evaluation.** The final styling quality is somewhat modest. The training process itself proved to be very resource-intensive. Due to the limitations and frequent session disconnects on the free tier of Google Colab, the process became a real challenge. For such demanding tasks, a more effective approach would be to use a local machine with a powerful GPU or to leverage paid cloud computing services.
+
+
+
 <a name="bot_todo"><h2>TODO List</h2></a>
 
 1. **FSM Timeouts:** Add timeouts to automatically cancel "stuck" user sessions.
-2. **NST Refactoring:** Process images in-memory (io.BytesIO) instead of saving them as temporary files, similar to the CycleGAN implementation.
-3. **Performance Improvements:** Optimize Docker resource limits and explore performance on a VPS with CUDA support.
-4. **Expand Functionality:** Add new stylization methods, algorithms, and network types.
-5. **Modularity:** Consider refactoring into microservices for better scalability, maintainability, and testing.
-6. **Monitoring:** Implement logging, metrics, and alerts.
-7. **Continuous Refactoring:** Consistently improve and clean up the codebase.
+2. **Additional check:** Add additional check and limit on the size of uploaded files (images) and etc.
+3. **NST Refactoring:** Process images in-memory (io.BytesIO) instead of saving them as temporary files, similar to the CycleGAN implementation.
+4. **Performance Improvements:** Optimize Docker resource limits and explore performance on a VPS with CUDA support.
+5. **Expand Functionality:** Add new stylization methods, algorithms, and network types.
+6. **Modularity:** Consider refactoring into microservices for better scalability, maintainability, and testing.
+7. **Monitoring:** Implement logging, metrics, and alerts.
+8. **Continuous Refactoring:** Consistently improve and clean up the codebase.

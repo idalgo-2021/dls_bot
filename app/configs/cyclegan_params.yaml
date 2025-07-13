@@ -25,4 +25,7 @@ styles:
     model_file: "style_vangogh.pth"
   horse2zebra:
     display_name: "🐴➡️🦓 Лошадь в зебру"
-    model_file: "horse2zebra.pth"  
+    model_file: "horse2zebra.pth" 
+  face2simpson:
+    display_name: "Лицо в Симпсона"
+    model_file: "faces2simpsons.pth"     
