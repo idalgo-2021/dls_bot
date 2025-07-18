@@ -302,7 +302,7 @@ styles:
 **Example Results:**
 
 <details>
-<summary>Примеры работы CycleGAN:</summary>
+<summary>Examples of CycleGAN:</summary>
 
 ![](docs/example_images/cyclegan/result_my_cyclegan.jpg)
 
